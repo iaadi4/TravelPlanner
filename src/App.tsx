@@ -10,8 +10,13 @@ import { PricingPage } from './components/Pricing/PricingPage';
 import { TripPlanner } from './components/Trip/TripPlanner';
 
 function App() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, initialize } = useAuthStore();
   const { currentView, sidebarOpen, isDarkMode } = useUIStore();
+
+  useEffect(() => {
+    // Initialize auth state
+    initialize();
+  }, []);
 
   useEffect(() => {
     // Apply dark mode class to document

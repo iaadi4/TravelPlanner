@@ -1,15 +1,18 @@
-import { create } from 'zustand';
-import { User } from '../types';
+import { create } from 'zustand'
+import { User } from '../types'
+import { supabaseService } from '../services/supabaseService'
+import { supabase } from '../lib/supabase'
 
 interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
-  updateProfile: (updates: Partial<User>) => Promise<void>;
+  user: User | null
+  isAuthenticated: boolean
+  isLoading: boolean
+  login: (email: string, password: string) => Promise<void>
+  loginWithGoogle: () => Promise<void>
+  register: (email: string, password: string, name: string) => Promise<void>
+  logout: () => Promise<void>
+  updateProfile: (updates: Partial<User>) => Promise<void>
+  initialize: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -17,87 +20,83 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
 
-  login: async (email: string, password: string) => {
-    set({ isLoading: true });
+  initialize: async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const user: User = {
-        id: '1',
-        email,
-        name: email.split('@')[0],
-        plan: 'free',
-        createdAt: new Date().toISOString(),
-      };
-      
-      set({ user, isAuthenticated: true, isLoading: false });
+      const user = await supabaseService.getCurrentUser()
+      set({ user, isAuthenticated: !!user })
     } catch (error) {
-      set({ isLoading: false });
-      throw error;
+      console.error('Auth initialization error:', error)
+      set({ user: null, isAuthenticated: false })
+    }
+  },
+
+  login: async (email: string, password: string) => {
+    set({ isLoading: true })
+    try {
+      await supabaseService.signIn(email, password)
+      const user = await supabaseService.getCurrentUser()
+      set({ user, isAuthenticated: true, isLoading: false })
+    } catch (error) {
+      set({ isLoading: false })
+      throw error
     }
   },
 
   loginWithGoogle: async () => {
-    set({ isLoading: true });
+    set({ isLoading: true })
     try {
-      // Simulate Google OAuth
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const user: User = {
-        id: '1',
-        email: 'user@example.com',
-        name: 'Demo User',
-        plan: 'free',
-        createdAt: new Date().toISOString(),
-      };
-      
-      set({ user, isAuthenticated: true, isLoading: false });
+      await supabaseService.signInWithGoogle()
+      // User will be set after redirect
+      set({ isLoading: false })
     } catch (error) {
-      set({ isLoading: false });
-      throw error;
+      set({ isLoading: false })
+      throw error
     }
   },
 
   register: async (email: string, password: string, name: string) => {
-    set({ isLoading: true });
+    set({ isLoading: true })
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const user: User = {
-        id: '1',
-        email,
-        name,
-        plan: 'free',
-        createdAt: new Date().toISOString(),
-      };
-      
-      set({ user, isAuthenticated: true, isLoading: false });
+      await supabaseService.signUp(email, password, name)
+      const user = await supabaseService.getCurrentUser()
+      set({ user, isAuthenticated: true, isLoading: false })
     } catch (error) {
-      set({ isLoading: false });
-      throw error;
+      set({ isLoading: false })
+      throw error
     }
   },
 
-  logout: () => {
-    set({ user: null, isAuthenticated: false });
+  logout: async () => {
+    try {
+      await supabaseService.signOut()
+      set({ user: null, isAuthenticated: false })
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   },
 
   updateProfile: async (updates: Partial<User>) => {
-    const { user } = get();
-    if (!user) return;
-    
-    set({ isLoading: true });
+    const { user } = get()
+    if (!user) return
+
+    set({ isLoading: true })
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const updatedUser = { ...user, ...updates };
-      set({ user: updatedUser, isLoading: false });
+      await supabaseService.updateProfile(updates)
+      const updatedUser = { ...user, ...updates }
+      set({ user: updatedUser, isLoading: false })
     } catch (error) {
-      set({ isLoading: false });
-      throw error;
+      set({ isLoading: false })
+      throw error
     }
   },
-}));
+}))
+
+// Listen for auth changes
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    const user = await supabaseService.getCurrentUser()
+    useAuthStore.setState({ user, isAuthenticated: true })
+  } else if (event === 'SIGNED_OUT') {
+    useAuthStore.setState({ user: null, isAuthenticated: false })
+  }
+})
