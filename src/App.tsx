@@ -34,9 +34,11 @@ function App() {
         return <TripPlanner />;
       case 'profile':
         return (
-          <div className="p-6">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Profile</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">Profile settings coming soon...</p>
+          <div className="min-h-full flex items-center justify-center p-6">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Profile</h1>
+              <p className="text-gray-600 dark:text-gray-400">Profile settings coming soon...</p>
+            </div>
           </div>
         );
       default:
@@ -49,7 +51,7 @@ function App() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="h-screen bg-gray-50 dark:bg-gray-900 flex flex-col overflow-hidden">
       <Header />
       <div className="flex flex-1 overflow-hidden">
         {sidebarOpen && <Sidebar />}
