@@ -1,10 +1,34 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Use placeholder values if environment variables are not set
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-anon-key'
+// Check if environment variables are properly set
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Validate that we have proper Supabase credentials
+if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder') || supabaseAnonKey.includes('placeholder')) {
+  console.warn('Supabase credentials not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.')
+}
+
+// Create a mock client if credentials are not available
+const createMockClient = () => ({
+  auth: {
+    signUp: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    signOut: () => Promise.resolve({ error: null }),
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+  },
+  from: () => ({
+    select: () => Promise.resolve({ data: [], error: null }),
+    insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
+  })
+})
+
+export const supabase = (supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder') && !supabaseAnonKey.includes('placeholder'))
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : createMockClient()
 
 // Database types
 export interface Database {
