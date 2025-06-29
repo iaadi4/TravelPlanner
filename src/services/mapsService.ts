@@ -1,20 +1,28 @@
 import { Loader } from '@googlemaps/js-api-loader';
 
 export class MapsService {
-  private loader: Loader;
+  private loader: Loader | null = null;
   private map: google.maps.Map | null = null;
   private markers: google.maps.Marker[] = [];
 
   constructor() {
-    this.loader = new Loader({
-      apiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-      version: 'weekly',
-      libraries: ['places', 'geometry', 'visualization']
-    });
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    
+    if (apiKey && apiKey !== 'your_google_maps_api_key_here') {
+      this.loader = new Loader({
+        apiKey,
+        version: 'weekly',
+        libraries: ['places', 'geometry', 'visualization']
+      });
+    }
   }
 
   async initializeMap(container: HTMLElement, center: { lat: number; lng: number }) {
     try {
+      if (!this.loader) {
+        throw new Error('Google Maps API key not configured');
+      }
+
       await this.loader.load();
       
       this.map = new google.maps.Map(container, {
@@ -38,6 +46,10 @@ export class MapsService {
 
   async searchPlaces(query: string, location: { lat: number; lng: number }) {
     try {
+      if (!this.loader) {
+        throw new Error('Google Maps API key not configured');
+      }
+
       await this.loader.load();
       
       const service = new google.maps.places.PlacesService(document.createElement('div'));
@@ -63,6 +75,10 @@ export class MapsService {
 
   async getPlaceDetails(placeId: string) {
     try {
+      if (!this.loader) {
+        throw new Error('Google Maps API key not configured');
+      }
+
       await this.loader.load();
       
       const service = new google.maps.places.PlacesService(document.createElement('div'));
@@ -120,7 +136,7 @@ export class MapsService {
   }
 
   async calculateRoute(waypoints: { lat: number; lng: number }[]) {
-    if (!this.map || waypoints.length < 2) return null;
+    if (!this.map || waypoints.length < 2 || !this.loader) return null;
 
     try {
       await this.loader.load();

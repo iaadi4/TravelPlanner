@@ -91,12 +91,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 }))
 
-// Listen for auth changes
-supabase.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session) {
-    const user = await supabaseService.getCurrentUser()
-    useAuthStore.setState({ user, isAuthenticated: true })
-  } else if (event === 'SIGNED_OUT') {
-    useAuthStore.setState({ user: null, isAuthenticated: false })
-  }
-})
+// Listen for auth changes with error handling
+try {
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      const user = await supabaseService.getCurrentUser()
+      useAuthStore.setState({ user, isAuthenticated: true })
+    } else if (event === 'SIGNED_OUT') {
+      useAuthStore.setState({ user: null, isAuthenticated: false })
+    }
+  })
+} catch (error) {
+  console.warn('Auth state change listener setup failed:', error)
+}

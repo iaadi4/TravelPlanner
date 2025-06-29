@@ -42,16 +42,20 @@ export const MapView: React.FC<MapViewProps> = ({
       let center = defaultCenter;
 
       if (trip?.destination) {
-        // Geocode the destination
-        center = await geocodeAddress(trip.destination);
+        // Try to geocode the destination, fallback to default
+        try {
+          center = await geocodeAddress(trip.destination);
+        } catch {
+          console.warn('Geocoding failed, using default location');
+        }
       }
 
       const mapInstance = await mapsService.initializeMap(mapRef.current, center);
       setMap(mapInstance);
       setError(null);
     } catch (err) {
-      setError('Failed to load map');
-      console.error('Map initialization error:', err);
+      setError('Maps not available in demo mode');
+      console.warn('Map initialization error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +63,11 @@ export const MapView: React.FC<MapViewProps> = ({
 
   const geocodeAddress = async (address: string): Promise<{ lat: number; lng: number }> => {
     return new Promise((resolve, reject) => {
+      if (typeof google === 'undefined' || !google.maps) {
+        reject(new Error('Google Maps not loaded'));
+        return;
+      }
+
       const geocoder = new google.maps.Geocoder();
       geocoder.geocode({ address }, (results, status) => {
         if (status === 'OK' && results && results[0]) {
@@ -135,8 +144,11 @@ export const MapView: React.FC<MapViewProps> = ({
     return (
       <div className="w-full h-96 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
         <div className="text-center">
-          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400 mb-2">{error}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            Configure Google Maps API key to enable interactive maps
+          </p>
           <button
             onClick={initializeMap}
             className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
