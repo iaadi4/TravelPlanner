@@ -5,28 +5,96 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Validate that we have proper Supabase credentials
-if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('placeholder') || supabaseAnonKey.includes('placeholder')) {
-  console.warn('Supabase credentials not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.')
+const hasValidCredentials = supabaseUrl && 
+  supabaseAnonKey && 
+  !supabaseUrl.includes('placeholder') && 
+  !supabaseAnonKey.includes('placeholder') &&
+  supabaseUrl.startsWith('https://') &&
+  supabaseUrl.includes('.supabase.co')
+
+if (!hasValidCredentials) {
+  console.warn('Supabase credentials not configured. Running in demo mode. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.')
 }
 
 // Create a mock client if credentials are not available
 const createMockClient = () => ({
   auth: {
-    signUp: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-    signInWithPassword: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    signUp: () => Promise.resolve({ 
+      data: { 
+        user: { 
+          id: 'demo-user-' + Date.now(), 
+          email: 'demo@example.com',
+          user_metadata: { name: 'Demo User' }
+        }, 
+        session: null 
+      }, 
+      error: null 
+    }),
+    signInWithPassword: () => Promise.resolve({ 
+      data: { 
+        user: { 
+          id: 'demo-user-' + Date.now(), 
+          email: 'demo@example.com',
+          user_metadata: { name: 'Demo User' }
+        }, 
+        session: { access_token: 'demo-token' }
+      }, 
+      error: null 
+    }),
+    signInWithOAuth: () => Promise.resolve({ data: { url: null }, error: null }),
     signOut: () => Promise.resolve({ error: null }),
-    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-    onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } })
+    getUser: () => Promise.resolve({ 
+      data: { 
+        user: { 
+          id: 'demo-user', 
+          email: 'demo@example.com',
+          user_metadata: { name: 'Demo User' },
+          created_at: new Date().toISOString()
+        } 
+      }, 
+      error: null 
+    }),
+    getSession: () => Promise.resolve({ 
+      data: { session: { access_token: 'demo-token' } }, 
+      error: null 
+    }),
+    onAuthStateChange: (callback: any) => {
+      // Simulate auth state change for demo
+      setTimeout(() => {
+        callback('SIGNED_IN', { 
+          access_token: 'demo-token',
+          user: { 
+            id: 'demo-user', 
+            email: 'demo@example.com',
+            user_metadata: { name: 'Demo User' }
+          }
+        })
+      }, 100)
+      return { 
+        data: { 
+          subscription: { 
+            unsubscribe: () => {} 
+          } 
+        } 
+      }
+    }
   },
-  from: () => ({
+  from: (table: string) => ({
     select: () => Promise.resolve({ data: [], error: null }),
-    insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-    update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-    delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
-  })
+    insert: () => Promise.resolve({ data: null, error: null }),
+    update: () => Promise.resolve({ data: null, error: null }),
+    delete: () => Promise.resolve({ data: null, error: null }),
+    eq: function() { return this },
+    single: function() { return this },
+    order: function() { return this }
+  }),
+  channel: () => ({
+    on: () => ({ subscribe: () => {} })
+  }),
+  supabaseUrl: hasValidCredentials ? supabaseUrl : 'https://demo.supabase.co'
 })
 
-export const supabase = (supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('placeholder') && !supabaseAnonKey.includes('placeholder'))
+export const supabase = hasValidCredentials
   ? createClient(supabaseUrl, supabaseAnonKey)
   : createMockClient()
 

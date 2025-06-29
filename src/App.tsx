@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from './stores/authStore';
 import { useUIStore } from './stores/uiStore';
 import { AuthPage } from './components/Auth/AuthPage';
@@ -10,13 +10,24 @@ import { PricingPage } from './components/Pricing/PricingPage';
 import { TripPlanner } from './components/Trip/TripPlanner';
 
 function App() {
-  const { isAuthenticated, initialize } = useAuthStore();
+  const { isAuthenticated, initialize, isLoading } = useAuthStore();
   const { currentView, sidebarOpen, isDarkMode } = useUIStore();
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Initialize auth state
-    initialize();
-  }, []);
+    const initializeApp = async () => {
+      try {
+        await initialize();
+      } catch (error) {
+        console.error('App initialization error:', error);
+      } finally {
+        setIsInitialized(true);
+      }
+    };
+
+    initializeApp();
+  }, [initialize]);
 
   useEffect(() => {
     // Apply dark mode class to document
@@ -50,6 +61,18 @@ function App() {
         return <ChatInterface />;
     }
   };
+
+  // Show loading spinner while initializing
+  if (!isInitialized || isLoading) {
+    return (
+      <div className="h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading TravelHelperAI...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <AuthPage />;

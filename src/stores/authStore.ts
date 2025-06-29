@@ -22,11 +22,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     try {
+      set({ isLoading: true })
       const user = await supabaseService.getCurrentUser()
-      set({ user, isAuthenticated: !!user })
+      set({ user, isAuthenticated: !!user, isLoading: false })
     } catch (error) {
       console.error('Auth initialization error:', error)
-      set({ user: null, isAuthenticated: false })
+      set({ user: null, isAuthenticated: false, isLoading: false })
     }
   },
 
@@ -93,14 +94,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
 // Listen for auth changes with error handling
 try {
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      const user = await supabaseService.getCurrentUser()
-      useAuthStore.setState({ user, isAuthenticated: true })
-    } else if (event === 'SIGNED_OUT') {
-      useAuthStore.setState({ user: null, isAuthenticated: false })
-    }
-  })
+  if (supabase && typeof supabase.auth?.onAuthStateChange === 'function') {
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      try {
+        if (event === 'SIGNED_IN' && session) {
+          const user = await supabaseService.getCurrentUser()
+          useAuthStore.setState({ user, isAuthenticated: true })
+        } else if (event === 'SIGNED_OUT') {
+          useAuthStore.setState({ user: null, isAuthenticated: false })
+        }
+      } catch (error) {
+        console.warn('Auth state change error:', error)
+      }
+    })
+  }
 } catch (error) {
   console.warn('Auth state change listener setup failed:', error)
 }
