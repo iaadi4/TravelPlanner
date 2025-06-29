@@ -52,7 +52,7 @@ function App() {
   };
 
   if (!isAuthenticated) {
-   <div>Hii</div>
+    return <AuthPage />;
   }
 
   return (
